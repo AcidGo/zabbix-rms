@@ -1,20 +1,30 @@
 package app
 
 import (
+    "fmt"
     "net/http"
+    "strconv"
 
     "github.com/AcidGo/zabbix-rms/pkg/catalog"
+    "github.com/AcidGo/zabbix-rms/pkg/logger"
     "github.com/AcidGo/zabbix-rms/pkg/monitor"
     "github.com/AcidGo/zabbix-rms/pkg/zbxsend"
 )
 
 var (
+    logging     *logger.ContextLogger
     zbxSend     *zbxsend.ZbxSend
 )
 
+func init() {
+    logging = logger.FitContext("app")
+}
+
 func DiscoveryWorkspaceHd(w http.ResponseWriter, r *http.Request) {
+    logging.Debugf("%s get request from %s", r.URL.Path, r.RemoteAddr)
     if r.Method != http.MethodGet {
         w.WriteHeader(http.StatusBadRequest)
+        logging.Error("the request using %s method, expecting GET", r.Method)
         fmt.Fprintf(w, "please use GET method")
         return 
     }
@@ -23,6 +33,7 @@ func DiscoveryWorkspaceHd(w http.ResponseWriter, r *http.Request) {
 
     trs, err := catalog.GetWorkspaces()
     if err != nil {
+        logging.Errorf("get an error while call catalog.GetWorkspaces: %v", err)
         w.WriteHeader(http.StatusBadRequest)
         fmt.Fprintf(w, "get an error: %v", err)
         return 
@@ -32,9 +43,14 @@ func DiscoveryWorkspaceHd(w http.ResponseWriter, r *http.Request) {
 }
 
 func DiscoveryAppHd(w http.ResponseWriter, r *http.Request) {
-    const queryArg = "tenant_id"
+    const queryTid = "tenant_id"
+    const queryWid = "workspace_id"
+
+    logging.Debugf("%s get request from %s", r.URL.Path, r.RemoteAddr)
+
     if r.Method != http.MethodGet {
         w.WriteHeader(http.StatusBadRequest)
+        logging.Error("the request using %s method, expecting GET", r.Method)
         fmt.Fprintf(w, "please use GET method")
         return 
     }
@@ -42,16 +58,18 @@ func DiscoveryAppHd(w http.ResponseWriter, r *http.Request) {
     defer r.Body.Close()
 
     vals := r.URL.Query()
-    val, ok := vals[queryArg]
+    logging.Debugf("url query values is %v", vals)
+
+    val, ok := vals[queryTid]
     if !ok {
         w.WriteHeader(http.StatusBadRequest)
-        fmt.Fprintf(w, "not found the arg %s", queryArg)
+        fmt.Fprintf(w, "not found the arg %s", queryTid)
         return 
     }
 
     if len(val) != 1 {
         w.WriteHeader(http.StatusBadRequest)
-        fmt.Fprintf(w, "the values of %s is not equal one", queryArg)
+        fmt.Fprintf(w, "the values of %s is not equal one", queryTid)
         return 
     }
 
@@ -62,7 +80,27 @@ func DiscoveryAppHd(w http.ResponseWriter, r *http.Request) {
         return 
     }
 
-    trs, err := catalog.GetApps(tenantId)
+    val, ok = vals[queryWid]
+    if !ok {
+        w.WriteHeader(http.StatusBadRequest)
+        fmt.Fprintf(w, "not found the arg %s", queryWid)
+        return 
+    }
+
+    if len(val) != 1 {
+        w.WriteHeader(http.StatusBadRequest)
+        fmt.Fprintf(w, "the values of %s is not equal one", queryWid)
+        return 
+    }
+
+    workspaceId, err := strconv.Atoi(val[0])
+    if err != nil {
+        w.WriteHeader(http.StatusBadRequest)
+        fmt.Fprintf(w, "get an error: %v", err)
+        return 
+    }
+
+    trs, err := catalog.GetApps(tenantId, workspaceId)
     if err != nil {
         w.WriteHeader(http.StatusBadRequest)
         fmt.Fprintf(w, "get an error: %v", err)
@@ -73,7 +111,9 @@ func DiscoveryAppHd(w http.ResponseWriter, r *http.Request) {
 }
 
 func MonitorHd(w http.ResponseWriter, r *http.Request) {
+    logging.Debugf("%s get request from %s", r.URL.Path, r.RemoteAddr)
     if r.Method != http.MethodPost {
+        logging.Error("the request using %s method, expecting POST", r.Method)
         w.WriteHeader(http.StatusBadRequest)
         fmt.Fprintf(w, "please use POST method")
         return 
@@ -81,8 +121,9 @@ func MonitorHd(w http.ResponseWriter, r *http.Request) {
 
     defer r.Body.Close()
 
-    mp, err := monitor.Unpakc(r.Body)
+    mp, err := monitor.Unpacket(r.Body)
     if err != nil {
+        logging.Error(err)
         w.WriteHeader(http.StatusBadRequest)
         fmt.Fprintf(w, "get an error while unpack body: %v", err)
         return 
@@ -94,6 +135,7 @@ func MonitorHd(w http.ResponseWriter, r *http.Request) {
     zkey := fmt.Sprintf("rms.app[%s]", mp.AppName)
     err = zbxSend.Send(zhost, zkey, mp)
     if err != nil {
+        logging.Error(err)
         w.WriteHeader(http.StatusBadRequest)
         fmt.Fprintf(w, "get an error while send msg to zabbix: %v", err)
         return 

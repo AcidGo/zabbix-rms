@@ -2,6 +2,10 @@ package catalog
 
 import (
     "encoding/json"
+    "io"
+    "os"
+    "strconv"
+    "strings"
 )
 
 const (
@@ -14,24 +18,26 @@ const (
 type Workspace struct {
     TenantName      string  `json:"tenant_name"`
     TenantId        int     `json:"tenant_id"`
-    WorkspaceName   staring `json:"workspace_name"`
+    WorkspaceName   string  `json:"workspace_name"`
     WorkspaceId     int     `json:"workspace_id"`
 }
 
-type Workspaces []*Workspace
+type Workspaces struct {
+    ws []*Workspace
+}
 
 func (wss *Workspaces) FmtZbx() (string) {
-    res := map[string]interface{}{
-        "data": make([]map[string]interface{}, 0),
-    }
-    for _, val := range wss {
+    res := map[string]interface{}{}
+    var mSlice []map[string]interface{}
+    for _, val := range wss.ws {
         t := make(map[string]interface{})
         t["{#TENANT_NAME}"] = val.TenantName
         t["{#TENANT_ID}"] = val.TenantId
         t["{#WORKSPACE_NAME}"] = val.WorkspaceName
         t["{#WORKSPACE_ID}"] = val.WorkspaceId
-        res["data"] = append(res["data"], t)
+        mSlice = append(mSlice, t)
     }
+    res["data"] = mSlice
 
     b, _ := json.Marshal(res)
     return string(b)
@@ -49,7 +55,7 @@ func GetWorkspaces() (*Workspaces, error) {
         return nil, err
     }
 
-    wss := &Workspaces{}
+    wss := &Workspaces{ws: make([]*Workspace, 0)}
     s := strings.Split(string(b), "\n")
     for _, val := range s {
         ws := &Workspace{}
@@ -58,17 +64,17 @@ func GetWorkspaces() (*Workspaces, error) {
             continue
         }
         ws.TenantName = ss[0]
-        ws.TenantId, err = strconv.Atoi(s[1])
+        ws.TenantId, err = strconv.Atoi(ss[1])
         if err != nil {
             continue
         }
-        ws.WorkspaceName = s[2]
-        ws.WorkspaceId, err = strconv.Atoi(s[3])
+        ws.WorkspaceName = ss[2]
+        ws.WorkspaceId, err = strconv.Atoi(ss[3])
         if err != nil {
             continue
         }
 
-        wss = append(wss, ws)
+        wss.ws = append(wss.ws, ws)
     }
 
     return wss, nil
@@ -78,23 +84,25 @@ type App struct {
     Name    string  `json:"app_name"`
 }
 
-type Apps []*App
+type Apps struct {
+    apps    []*App
+}
 
 func (apps *Apps) FmtZbx() (string) {
-    res := map[string]interface{}{
-        "data": make([]map[string]interface{}, 0),
-    }
-    for _, val := range apps {
+    res := map[string]interface{}{}
+    var mSlice []map[string]interface{}
+    for _, val := range apps.apps {
         t := make(map[string]interface{})
         t["{#APP_NAME}"] = val.Name
-        res["data"] = append(res["data"], t)
+        mSlice = append(mSlice, t)
     }
+    res["data"] = mSlice
 
     b, _ := json.Marshal(res)
     return string(b)
 }
 
-func GetApps(id int) (*Apps, error) {
+func GetApps(tId, wId int) (*Apps, error) {
     f, err := os.Open(appFilePath)
     if err != nil {
         return nil, err
@@ -106,21 +114,19 @@ func GetApps(id int) (*Apps, error) {
         return nil, err
     }
 
-    apps := &Apps{}
+    apps := &Apps{apps: make([]*App, 0)}
     s := strings.Split(string(b), "\n")
     for _, val := range s {
-        app := &App{}
         ss := strings.Split(val, appSplitSymbol)
-        if len(ss) != 2 {
+        if len(ss) != 3 {
             continue
         }
-        if ss[0] != string(id) {
+        if ss[0] != strconv.Itoa(tId) || ss[1] != strconv.Itoa(wId) {
             continue
         }
 
-        app.Name = s[1]
-
-        apps = append(apps, app)
+        app := &App{Name: ss[2]}
+        apps.apps = append(apps.apps, app)
     }
 
     return apps, nil
