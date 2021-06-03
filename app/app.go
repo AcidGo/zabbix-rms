@@ -24,7 +24,7 @@ func DiscoveryWorkspaceHd(w http.ResponseWriter, r *http.Request) {
     logging.Debugf("%s get request from %s", r.URL.Path, r.RemoteAddr)
     if r.Method != http.MethodGet {
         w.WriteHeader(http.StatusBadRequest)
-        logging.Error("the request using %s method, expecting GET", r.Method)
+        logging.Errorf("the request using %s method, expecting GET", r.Method)
         fmt.Fprintf(w, "please use GET method")
         return 
     }
