@@ -28,7 +28,7 @@ type Workspaces struct {
 
 func (wss *Workspaces) FmtZbx() (string) {
     res := map[string]interface{}{}
-    var mSlice []map[string]interface{}
+    mSlice := make([]map[string]interface{}, 0)
     for _, val := range wss.ws {
         t := make(map[string]interface{})
         t["{#TENANT_NAME}"] = val.TenantName
@@ -90,7 +90,7 @@ type Apps struct {
 
 func (apps *Apps) FmtZbx() (string) {
     res := map[string]interface{}{}
-    var mSlice []map[string]interface{}
+    mSlice := make([]map[string]interface{}, 0)
     for _, val := range apps.apps {
         t := make(map[string]interface{})
         t["{#APP_NAME}"] = val.Name
