@@ -146,8 +146,8 @@ func MonitorHd(w http.ResponseWriter, r *http.Request) {
 
 func HttpSvr(l string, s *zbxsend.ZbxSend) (error) {
     zbxSend = s
-    http.HandleFunc("/discover_workspace", DiscoveryWorkspaceHd)
-    http.HandleFunc("/discover_app", DiscoveryAppHd)
+    http.HandleFunc("/discovery_workspace", DiscoveryWorkspaceHd)
+    http.HandleFunc("/discovery_app", DiscoveryAppHd)
     http.HandleFunc("/rms_monitor", MonitorHd)
 
     err := http.ListenAndServe(l, nil)
