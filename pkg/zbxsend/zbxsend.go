@@ -2,7 +2,6 @@ package zbxsend
 
 import (
     "encoding/json"
-    "fmt"
     "github.com/blacked/go-zabbix"
 )
 
@@ -25,8 +24,6 @@ func (zs *ZbxSend) Send(zhost, key string, value interface{}) (error) {
     if err != nil {
         return err
     }
-
-    fmt.Println(string(b))
 
     metrics := make([]*zabbix.Metric, 1)
     metrics[0] = zabbix.NewMetric(

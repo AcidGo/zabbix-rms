@@ -10,8 +10,8 @@ type MPacket struct {
     Level           int     `json:"level"`
     Content         string  `json:"content"`
     // WorkspaceName   string  `json:"workspaceName"`
-    TenantId        float32 `json:"tenantId"`
-    WorkspaceId     float32 `json:"workspaceId"`
+    TenantId        float32 `json:"tenantId,string"`
+    WorkspaceId     float32 `json:"workspaceId,string"`
     AppName         string  `json:"app"`
     // DsId            string  `json:"dsId"`
     MonitorItem     string  `json:"monitorItem"`

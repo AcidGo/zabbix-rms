@@ -1,8 +1,11 @@
 package app
 
 import (
+    "bufio"
+    "bytes"
     "fmt"
     "net/http"
+    "io"
     "strconv"
 
     "github.com/AcidGo/zabbix-rms/pkg/catalog"
@@ -120,8 +123,11 @@ func MonitorHd(w http.ResponseWriter, r *http.Request) {
     }
 
     defer r.Body.Close()
+    rd := bufio.NewReader(r.Body)
+    bodyBytes, _ := io.ReadAll(rd)
+    logging.Debugf("body of request: %s", string(bodyBytes))
 
-    mp, err := monitor.Unpacket(r.Body)
+    mp, err := monitor.Unpacket(bytes.NewReader(bodyBytes))
     if err != nil {
         logging.Error(err)
         w.WriteHeader(http.StatusBadRequest)
@@ -130,7 +136,7 @@ func MonitorHd(w http.ResponseWriter, r *http.Request) {
     }
 
     // hardcode: gen an zabbix host name fmt
-    zhost := fmt.Sprintf("rms_%d_%d", mp.TenantId, mp.WorkspaceId)
+    zhost := fmt.Sprintf("rms_%d_%d", int(mp.TenantId), int(mp.WorkspaceId))
     // hardcode: gen an zabbix item key fmt
     zkey := fmt.Sprintf("rms.app[%s]", mp.AppName)
     err = zbxSend.Send(zhost, zkey, mp)
